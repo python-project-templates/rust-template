@@ -10,7 +10,7 @@ develop-rust:
 
 develop: develop-rust develop-py  ## setup project for development
 
-.PHONY: build-py build-rust build
+.PHONY: build-py build-rust build dev
 build-py:
 	maturin build
 
@@ -41,10 +41,11 @@ lint-py:  ## run python linter with ruff
 	python -m ruff check rust_template
 	python -m ruff format --check rust_template
 
-lint-rust:  ## run the rust linter
+lint-rust:  ## run rust linter
 	make -C rust lint
 
 lint: lint-rust lint-py  ## run project linters
+
 # alias
 lints: lint
 
@@ -57,6 +58,7 @@ fix-rust:  ## fix rust formatting
 	make -C rust fix
 
 fix: fix-rust fix-py  ## run project autoformatters
+
 # alias
 format: fix
 
@@ -79,26 +81,30 @@ annotate:  ## run python type annotation checks with mypy
 #########
 # TESTS #
 #########
-.PHONY: test test-py coverage-py tests
-
+.PHONY: test-py tests-py coverage-py
 test-py:  ## run python tests
 	python -m pytest -v rust_template/tests --junitxml=junit.xml
+
 # alias
 tests-py: test-py
 
 coverage-py:  ## run python tests and collect test coverage
 	python -m pytest -v rust_template/tests --junitxml=junit.xml --cov=rust_template --cov-branch --cov-fail-under=50 --cov-report term-missing --cov-report xml
 
+.PHONY: test-rust tests-rust coverage-rust
 test-rust:  ## run rust tests
 	make -C rust test
+
 # alias
 tests-rust: test-rust
 
 coverage-rust:  ## run rust tests and collect test coverage
 	make -C rust coverage
 
+.PHONY: test coverage tests
 test: test-py test-rust  ## run all tests
 coverage: coverage-py coverage-rust  ## run all tests and collect test coverage
+
 # alias
 tests: test
 
@@ -122,18 +128,21 @@ major:  ## bump a major version
 ########
 # DIST #
 ########
-.PHONY: dist dist-build dist-sdist dist-local-wheel publish
+.PHONY: dist-py-wheel dist-py-sdist dist-rust dist-check dist publish
 
-dist-build-py:  # build python dists
-	python -m build -w -s
+dist-py-wheel:  # build python wheel
+	python -m cibuildwheel --output-dir dist
 
-dist-build-rust:  # build rust dists
+dist-py-sdist:  # build python sdist
+	python -m build --sdist -o dist
+
+dist-rust:  # build rust dists
 	make -C rust dist
 
 dist-check:  ## run python dist checker with twine
 	python -m twine check dist/*
 
-dist: clean build dist-build-rust dist-build-py dist-check  ## build all dists
+dist: clean build dist-rust dist-py-wheel dist-py-sdist dist-check  ## build all dists
 
 publish: dist  # publish python assets
 
